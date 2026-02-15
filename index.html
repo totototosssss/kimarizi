@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>決まり字クイズ</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>決まり字 クイズ道場</h1>
+            <div id="status">データ読込中...</div>
+        </header>
+
+        <main>
+            <div id="quiz-area" class="hidden">
+                <div class="question-box">
+                    <div id="question-text"></div>
+                </div>
+
+                <div id="answer-area">
+                    <input type="text" id="user-input" placeholder="答えを入力（ひらがな可）" autocomplete="off">
+                    <button id="submit-btn">回答する</button>
+                </div>
+
+                <div id="result-area" class="hidden">
+                    <div id="result-msg"></div>
+                    <div id="correct-answer"></div>
+                    <button id="next-btn">次の問題へ</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
