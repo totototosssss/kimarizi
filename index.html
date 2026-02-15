@@ -3,58 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz</title>
+    <title>Simple Quiz</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 <body>
+    <div class="container">
+        
+        <header>
+            <div class="nav-group">
+                <button id="mode-kimariji" class="nav-btn active" onclick="changeMode('kimariji')">決まり字</button>
+                <button id="mode-normal" class="nav-btn" onclick="changeMode('normal')">早押し</button>
+            </div>
+            <div class="nav-group">
+                <button id="mode-review" class="nav-btn" onclick="toggleReview()">
+                    復習リスト (<span id="review-badge">0</span>)
+                </button>
+            </div>
+        </header>
 
-    <header>
-        <nav>
-            <button id="nav-kimariji" onclick="setMode('kimariji')" class="active">決まり字</button>
-            <button id="nav-normal" onclick="setMode('normal')">早押し</button>
-            <button id="nav-review" onclick="toggleReviewMode()">復習 (<span id="review-count">0</span>)</button>
-        </nav>
-        <div id="status">Ready</div>
-    </header>
-
-    <main>
-        <div id="question-area">
-            <div id="question-text">ここに問題が表示されます</div>
-        </div>
-
-        <div id="action-area">
+        <main>
+            <div id="status-bar">Ready</div>
             
-            <div id="phase-buzz">
-                <button id="buzz-btn">SPACE</button>
+            <div class="question-box">
+                <div id="question-text">読み込み中...</div>
             </div>
 
-            <div id="phase-answer" class="hidden">
-                <input type="text" id="user-input" autocomplete="off">
-                <button id="submit-btn">ENTER</button>
-            </div>
+            <div class="control-area">
+                
+                <div id="view-buzz">
+                    <button id="buzz-btn" class="big-btn">PUSH (Space)</button>
+                </div>
 
-            <div id="phase-result" class="hidden">
-                <div id="result-label"></div>
-                <div id="correct-info"></div>
-                <div class="result-actions">
-                    <button id="next-btn" class="autofocus">NEXT</button>
-                    <button id="del-review-btn" class="sub-btn">リストから削除</button>
+                <div id="view-answer" class="hidden">
+                    <input type="text" id="answer-input" placeholder="答えを入力" autocomplete="off">
+                    <button id="answer-submit" class="action-btn">回答</button>
+                </div>
+
+                <div id="view-result" class="hidden">
+                    <div id="result-message"></div>
+                    <div id="correct-text"></div>
+                    <div class="result-buttons">
+                        <button id="next-btn" class="action-btn primary">次の問題へ (Enter)</button>
+                        <button id="review-toggle-btn" class="action-btn secondary">リストに追加</button>
+                    </div>
                 </div>
             </div>
+        </main>
 
-        </div>
-
-        <div id="review-list-area" class="hidden">
-            <div class="list-header">
-                <span>Wrong List</span>
-                <button onclick="clearReviewList()" class="text-btn">Clear All</button>
+        <div id="review-panel" class="hidden">
+            <div class="panel-header">
+                <h3>復習リスト</h3>
+                <button onclick="clearReviewList()" class="text-link">全消去</button>
             </div>
-            <ul id="wrong-list"></ul>
+            <ul id="review-list"></ul>
+            <button onclick="toggleReview()" class="close-panel">閉じる</button>
         </div>
 
-    </main>
-
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
