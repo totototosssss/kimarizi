@@ -1,126 +1,132 @@
-let questions = [];
-let pool = [];
+// === 変数定義 ===
+let allQuestions = [];
+let currentPool = [];
 let currentQ = null;
-let mode = 'kimariji'; // 'kimariji' | 'normal' | 'review'
+let mode = 'kimariji'; // 'kimariji' | 'normal'
 let timer = null;
 let charIndex = 0;
-let state = 'idle'; // 'idle', 'buzz', 'answer', 'result'
 let wrongList = new Set();
+let isBuzzing = false;
 
+// DOM要素
 const dom = {
-    navKimariji: document.getElementById('nav-kimariji'),
-    navNormal: document.getElementById('nav-normal'),
-    navReview: document.getElementById('nav-review'),
-    reviewCount: document.getElementById('review-count'),
-    status: document.getElementById('status'),
+    // Nav
+    btnKimariji: document.getElementById('mode-kimariji'),
+    btnNormal: document.getElementById('mode-normal'),
+    badgeReview: document.getElementById('review-badge'),
     
+    // Main
+    statusBar: document.getElementById('status-bar'),
+    qBox: document.querySelector('.question-box'), // クラスで取得
     qText: document.getElementById('question-text'),
     
-    phaseBuzz: document.getElementById('phase-buzz'),
+    // Views
+    viewBuzz: document.getElementById('view-buzz'),
     buzzBtn: document.getElementById('buzz-btn'),
     
-    phaseAnswer: document.getElementById('phase-answer'),
-    input: document.getElementById('user-input'),
-    submitBtn: document.getElementById('submit-btn'),
+    viewAnswer: document.getElementById('view-answer'),
+    input: document.getElementById('answer-input'),
+    submitBtn: document.getElementById('answer-submit'),
     
-    phaseResult: document.getElementById('phase-result'),
-    resultLabel: document.getElementById('result-label'),
-    correctInfo: document.getElementById('correct-info'),
+    viewResult: document.getElementById('view-result'),
+    resMsg: document.getElementById('result-message'),
+    resCorrect: document.getElementById('correct-text'),
     nextBtn: document.getElementById('next-btn'),
-    delReviewBtn: document.getElementById('del-review-btn'),
+    reviewToggleBtn: document.getElementById('review-toggle-btn'),
     
-    reviewArea: document.getElementById('review-list-area'),
-    wrongList: document.getElementById('wrong-list')
+    // Review Panel
+    reviewPanel: document.getElementById('review-panel'),
+    reviewList: document.getElementById('review-list')
 };
 
-// 初期化
+// === 初期化 ===
 window.onload = () => {
+    // ローカルストレージ読み込み
     const saved = localStorage.getItem('quiz_wrong_list');
-    if (saved) wrongList = new Set(JSON.parse(saved));
-    updateReviewCount();
+    if (saved) {
+        try {
+            wrongList = new Set(JSON.parse(saved));
+        } catch(e) { console.error("Save data corrupted"); }
+    }
+    updateReviewBadge();
 
+    // CSV読み込み
     Papa.parse("questions.csv", {
         download: true,
         header: true,
         dynamicTyping: true,
+        skipEmptyLines: true,
         complete: (res) => {
-            questions = res.data.filter(q => q.question && q.answer);
-            dom.status.textContent = `${questions.length} Questions Loaded`;
-            initPool();
-            nextQuestion();
+            allQuestions = res.data.filter(q => q.question && q.answer);
+            dom.statusBar.textContent = `Loaded: ${allQuestions.length} questions`;
+            initGame();
+        },
+        error: () => {
+            dom.questionText.textContent = "CSV読み込みエラー。ファイルを確認してください。";
         }
     });
 };
 
-function initPool() {
-    if (mode === 'review') {
-        pool = questions.filter(q => wrongList.has(q.question));
-        if (pool.length === 0) {
-            alert("復習リストは空です");
-            setMode('kimariji');
-            return;
-        }
-    } else {
-        pool = [...questions];
-    }
+// ゲーム開始準備
+function initGame() {
+    currentPool = [...allQuestions];
+    changeMode('kimariji'); // デフォルトモード
 }
 
-// モード切替
-window.setMode = (newMode) => {
+// モード変更
+window.changeMode = (newMode) => {
     mode = newMode;
-    dom.navKimariji.className = mode === 'kimariji' ? 'active' : '';
-    dom.navNormal.className = mode === 'normal' ? 'active' : '';
-    dom.navReview.className = '';
     
-    dom.reviewArea.classList.add('hidden'); // リスト表示は閉じる
-    initPool();
+    // ボタンの見た目更新
+    dom.btnKimariji.classList.toggle('active', mode === 'kimariji');
+    dom.btnNormal.classList.toggle('active', mode === 'normal');
+    
+    // 早押しなら左寄せ、決まり字なら中央寄せ
+    if (mode === 'normal') {
+        dom.qBox.classList.add('text-left');
+        dom.qBox.classList.remove('text-center');
+    } else {
+        dom.qBox.classList.add('text-center');
+        dom.qBox.classList.remove('text-left');
+    }
+
     nextQuestion();
 };
 
-window.toggleReviewMode = () => {
-    // 復習モードへの切り替えではなく、リスト表示のトグル
-    if (dom.reviewArea.classList.contains('hidden')) {
-        renderWrongList();
-        dom.reviewArea.classList.remove('hidden');
-    } else {
-        dom.reviewArea.classList.add('hidden');
-    }
-};
-
-// 問題進行
+// === クイズ進行ロジック ===
 function nextQuestion() {
-    if (pool.length === 0) initPool(); // ループさせるか終了させるかは好みで
-
+    // リセット
     clearInterval(timer);
-    state = 'buzz';
-    
-    // UIリセット
-    dom.phaseBuzz.classList.remove('hidden');
-    dom.phaseAnswer.classList.add('hidden');
-    dom.phaseResult.classList.add('hidden');
-    dom.buzzBtn.disabled = false;
+    isBuzzing = false;
     dom.input.value = "";
-    dom.qText.innerHTML = "";
+    
+    // 画面切り替え
+    dom.viewBuzz.classList.remove('hidden');
+    dom.viewAnswer.classList.add('hidden');
+    dom.viewResult.classList.add('hidden');
+    dom.buzzBtn.disabled = false;
 
-    // 問題選択
-    const randIdx = Math.floor(Math.random() * pool.length);
-    currentQ = pool[randIdx];
+    // 問題抽選
+    if (currentPool.length === 0) currentPool = [...allQuestions];
+    const randIdx = Math.floor(Math.random() * currentPool.length);
+    currentQ = currentPool[randIdx];
 
     const kLen = currentQ.kimariji_len || 5;
 
+    // 表示処理
+    dom.qText.innerHTML = "";
+    
     if (mode === 'kimariji') {
-        // 決まり字モード：即入力待機（見た目はbuzzフェーズをスキップしているように見せる）
-        state = 'answer';
-        dom.phaseBuzz.classList.add('hidden');
-        dom.phaseAnswer.classList.remove('hidden');
+        // 決まり字モード：即入力画面へ
+        dom.viewBuzz.classList.add('hidden');
+        dom.viewAnswer.classList.remove('hidden');
         
         const part = currentQ.question.substring(0, kLen);
         dom.qText.innerHTML = `<span class="highlight">${part}</span>`;
         dom.input.focus();
-
+        
     } else {
-        // 早押しモード / 復習モード（再生）
-        dom.qText.style.textAlign = 'left';
+        // 早押しモード：文字送り
         charIndex = 0;
         timer = setInterval(() => {
             if (charIndex < currentQ.question.length) {
@@ -134,18 +140,18 @@ function nextQuestion() {
             } else {
                 clearInterval(timer);
             }
-        }, 70);
+        }, 70); // 速度
     }
 }
 
-// 早押しアクション
+// 早押しボタン
 function buzz() {
-    if (state !== 'buzz') return;
-    state = 'answer';
+    if (isBuzzing) return;
+    isBuzzing = true;
     clearInterval(timer);
     
-    dom.phaseBuzz.classList.add('hidden');
-    dom.phaseAnswer.classList.remove('hidden');
+    dom.viewBuzz.classList.add('hidden');
+    dom.viewAnswer.classList.remove('hidden');
     dom.input.focus();
 }
 
@@ -154,114 +160,140 @@ function checkAnswer() {
     const val = dom.input.value.trim();
     if (!val) return;
 
-    state = 'result';
+    // 画面切り替え
+    dom.viewAnswer.classList.add('hidden');
+    dom.viewResult.classList.remove('hidden');
+
+    // 判定
     const isCorrect = (val === currentQ.answer || val === currentQ.kana);
-    
-    dom.phaseAnswer.classList.add('hidden');
-    dom.phaseResult.classList.remove('hidden');
 
     if (isCorrect) {
-        dom.resultLabel.textContent = "Correct";
-        dom.resultLabel.className = "correct";
+        dom.resMsg.textContent = "正解！";
+        dom.resMsg.className = "correct";
         dom.qText.textContent = currentQ.question; // 全文表示
         
-        // リストにあれば削除
+        // 正解したらリストから削除
         if (wrongList.has(currentQ.question)) {
             wrongList.delete(currentQ.question);
             saveList();
         }
     } else {
-        dom.resultLabel.textContent = "Wrong";
-        dom.resultLabel.className = "wrong";
-        dom.qText.innerHTML += ` <span class="faded">(...${currentQ.question.substring(charIndex)})</span>`;
+        dom.resMsg.textContent = "不正解...";
+        dom.resMsg.className = "wrong";
+        // 残り文字を表示
+        const rest = currentQ.question.substring(charIndex || currentQ.kimariji_len || 0);
+        dom.qText.innerHTML += `<span style="color:#aaa">${rest}</span>`;
         
-        // リストになければ追加
+        // 間違えたらリストに追加
         if (!wrongList.has(currentQ.question)) {
             wrongList.add(currentQ.question);
             saveList();
         }
     }
-    
-    // 正解情報表示
-    dom.correctInfo.textContent = `${currentQ.answer} (${currentQ.kana})`;
-    
-    // 削除ボタンのラベル制御
-    updateDelBtn();
-    
+
+    dom.resCorrect.textContent = `A. ${currentQ.answer} (${currentQ.kana})`;
+    updateReviewBtnState();
     dom.nextBtn.focus();
 }
 
-// リスト操作
+// === 復習リスト関連 ===
+function updateReviewBadge() {
+    dom.badgeReview.textContent = wrongList.size;
+}
+
 function saveList() {
     localStorage.setItem('quiz_wrong_list', JSON.stringify([...wrongList]));
-    updateReviewCount();
-}
-function updateReviewCount() {
-    dom.reviewCount.textContent = wrongList.size;
+    updateReviewBadge();
 }
 
-function updateDelBtn() {
+function updateReviewBtnState() {
     if (wrongList.has(currentQ.question)) {
-        dom.delReviewBtn.textContent = "リストから削除";
-        dom.delReviewBtn.style.display = 'inline-block';
+        dom.reviewToggleBtn.textContent = "リストから削除";
+        dom.reviewToggleBtn.classList.add('wrong'); // 赤っぽく
     } else {
-        dom.delReviewBtn.style.display = 'none';
+        dom.reviewToggleBtn.textContent = "リストに追加";
+        dom.reviewToggleBtn.classList.remove('wrong');
     }
 }
 
-// イベントリスナー
-dom.buzzBtn.addEventListener('click', buzz);
-dom.submitBtn.addEventListener('click', checkAnswer);
-dom.nextBtn.addEventListener('click', nextQuestion);
-
-dom.delReviewBtn.addEventListener('click', () => {
-    wrongList.delete(currentQ.question);
+// トグルボタン（結果画面）
+dom.reviewToggleBtn.onclick = () => {
+    if (wrongList.has(currentQ.question)) {
+        wrongList.delete(currentQ.question);
+    } else {
+        wrongList.add(currentQ.question);
+    }
     saveList();
-    updateDelBtn();
-});
+    updateReviewBtnState();
+};
 
-// リスト描画
-window.renderWrongList = () => {
-    dom.wrongList.innerHTML = "";
+// 復習パネル開閉
+window.toggleReview = () => {
+    if (dom.reviewPanel.classList.contains('hidden')) {
+        renderReviewList();
+        dom.reviewPanel.classList.remove('hidden');
+    } else {
+        dom.reviewPanel.classList.add('hidden');
+    }
+};
+
+function renderReviewList() {
+    dom.reviewList.innerHTML = "";
     if (wrongList.size === 0) {
-        dom.wrongList.innerHTML = "<li>Empty</li>";
+        dom.reviewList.innerHTML = "<li>リストは空です</li>";
         return;
     }
-    const list = questions.filter(q => wrongList.has(q.question));
+
+    // 文字列(Set)だけだと詳細が出せないので、allQuestionsから検索
+    const list = allQuestions.filter(q => wrongList.has(q.question));
+    
     list.forEach(q => {
         const li = document.createElement('li');
         li.innerHTML = `
-            <span>${q.answer} - ${q.question.substring(0, 15)}...</span>
-            <button onclick="removeFromList('${q.question.replace(/'/g, "\\'")}')">×</button>
+            <div>
+                <strong>${q.answer}</strong><br>
+                <small>${q.question.substring(0, 20)}...</small>
+            </div>
+            <button class="del-btn">削除</button>
         `;
-        dom.wrongList.appendChild(li);
+        // 削除ボタンのイベント
+        li.querySelector('.del-btn').onclick = () => {
+            wrongList.delete(q.question);
+            saveList();
+            renderReviewList(); // 再描画
+        };
+        dom.reviewList.appendChild(li);
     });
-};
-
-window.removeFromList = (qStr) => {
-    wrongList.delete(qStr);
-    saveList();
-    renderWrongList();
-};
+}
 
 window.clearReviewList = () => {
-    if(confirm("Clear all?")) {
+    if (confirm("リストを空にしますか？")) {
         wrongList.clear();
         saveList();
-        renderWrongList();
+        renderReviewList();
     }
 };
 
-// キーボード制御
+// === イベントリスナー ===
+dom.buzzBtn.onclick = buzz;
+dom.submitBtn.onclick = checkAnswer;
+dom.nextBtn.onclick = nextQuestion;
+
+// キーボード
 document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') {
-        if (state === 'buzz' && document.activeElement !== dom.input) {
-            e.preventDefault();
-            buzz();
+    // Enter
+    if (e.code === 'Enter') {
+        if (!dom.viewAnswer.classList.contains('hidden')) {
+            checkAnswer();
+        } else if (!dom.viewResult.classList.contains('hidden')) {
+            nextQuestion();
         }
     }
-    if (e.code === 'Enter') {
-        if (state === 'answer') checkAnswer();
-        else if (state === 'result') nextQuestion();
+    // Space (Buzz)
+    if (e.code === 'Space') {
+        if (!dom.viewBuzz.classList.contains('hidden') && mode === 'normal') {
+            e.preventDefault(); // スクロール防止
+            buzz();
+        }
     }
 });
