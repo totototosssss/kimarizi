@@ -1,0 +1,113 @@
+body {
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.container {
+    width: 90%;
+    max-width: 700px;
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+h1 { margin-top: 0; font-size: 1.5rem; color: #444; }
+
+/* 問題文エリア */
+.question-box {
+    min-height: 100px;
+    background: #e3f2fd; /* 薄い青 */
+    padding: 25px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    font-size: 1.4rem;
+    line-height: 1.6;
+    text-align: center; /* 短い文が多いので中央寄せ */
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 決まり字部分のスタイル */
+.kimariji-part {
+    color: #d32f2f; /* 赤 */
+    border-bottom: 2px solid #d32f2f;
+}
+
+/* 確定後の残り部分（回答後に表示） */
+.rest-part {
+    color: #555;
+    font-weight: normal;
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 入力エリア */
+#answer-area {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+input[type="text"] {
+    padding: 12px;
+    font-size: 1.2rem;
+    width: 60%;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    outline: none;
+}
+
+input[type="text"]:focus {
+    border-color: #2196f3;
+}
+
+button {
+    padding: 12px 24px;
+    font-size: 1rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    background-color: #2196f3;
+    color: white;
+    transition: background 0.2s;
+}
+
+button:hover { background-color: #1976d2; }
+
+#next-btn {
+    background-color: #4caf50; /* 緑 */
+    margin-top: 15px;
+    width: 100%;
+    font-size: 1.2rem;
+}
+
+/* 結果表示 */
+.hidden { display: none; }
+
+#result-msg {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+.correct { color: #2e7d32; }
+.wrong { color: #d32f2f; }
+
+#correct-answer {
+    color: #666;
+    font-size: 1rem;
+}
