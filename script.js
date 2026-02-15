@@ -8,7 +8,7 @@ let charIndex = 0;
 let wrongList = new Set();
 let isBuzzing = false;
 
-// DOM要素
+// DOM要素の取得
 const dom = {
     // Nav
     btnKimariji: document.getElementById('mode-kimariji'),
@@ -17,7 +17,7 @@ const dom = {
     
     // Main
     statusBar: document.getElementById('status-bar'),
-    qBox: document.querySelector('.question-box'), // クラスで取得
+    qBox: document.querySelector('.question-box'),
     qText: document.getElementById('question-text'),
     
     // Views
@@ -39,30 +39,49 @@ const dom = {
     reviewList: document.getElementById('review-list')
 };
 
-// === 初期化 ===
+// === 初期化処理 ===
 window.onload = () => {
-    // ローカルストレージ読み込み
+    console.log("初期化開始...");
+    
+    // 1. ローカルストレージ読み込み
     const saved = localStorage.getItem('quiz_wrong_list');
     if (saved) {
         try {
             wrongList = new Set(JSON.parse(saved));
-        } catch(e) { console.error("Save data corrupted"); }
+        } catch(e) {
+            console.error("セーブデータ破損:", e);
+        }
     }
     updateReviewBadge();
 
-    // CSV読み込み
+    // 2. CSV読み込み
+    dom.qText.textContent = "データを読み込んでいます...";
+    
     Papa.parse("questions.csv", {
         download: true,
         header: true,
-        dynamicTyping: true,
         skipEmptyLines: true,
         complete: (res) => {
-            allQuestions = res.data.filter(q => q.question && q.answer);
-            dom.statusBar.textContent = `Loaded: ${allQuestions.length} questions`;
+            console.log("CSV読み込み完了:", res);
+            
+            // データの抽出（questionとanswerがある行のみ）
+            if (res.data && res.data.length > 0) {
+                allQuestions = res.data.filter(q => q.question && q.answer);
+            }
+
+            // データチェック
+            if (allQuestions.length === 0) {
+                dom.qText.innerHTML = "<span style='color:red'>エラー: 問題データが見つかりません。<br>CSVの中身やファイル名(questions.csv)を確認してください。</span>";
+                return;
+            }
+
+            // 成功時
+            dom.statusBar.textContent = `収録問題数: ${allQuestions.length}問`;
             initGame();
         },
-        error: () => {
-            dom.questionText.textContent = "CSV読み込みエラー。ファイルを確認してください。";
+        error: (err) => {
+            console.error("CSVエラー:", err);
+            dom.qText.innerHTML = `<span style='color:red'>読み込みエラーが発生しました。<br>${err.message}</span>`;
         }
     });
 };
@@ -70,7 +89,7 @@ window.onload = () => {
 // ゲーム開始準備
 function initGame() {
     currentPool = [...allQuestions];
-    changeMode('kimariji'); // デフォルトモード
+    changeMode('kimariji'); 
 }
 
 // モード変更
@@ -78,10 +97,10 @@ window.changeMode = (newMode) => {
     mode = newMode;
     
     // ボタンの見た目更新
-    dom.btnKimariji.classList.toggle('active', mode === 'kimariji');
-    dom.btnNormal.classList.toggle('active', mode === 'normal');
+    if(dom.btnKimariji) dom.btnKimariji.classList.toggle('active', mode === 'kimariji');
+    if(dom.btnNormal) dom.btnNormal.classList.toggle('active', mode === 'normal');
     
-    // 早押しなら左寄せ、決まり字なら中央寄せ
+    // クラスの付け替え
     if (mode === 'normal') {
         dom.qBox.classList.add('text-left');
         dom.qBox.classList.remove('text-center');
@@ -95,6 +114,9 @@ window.changeMode = (newMode) => {
 
 // === クイズ進行ロジック ===
 function nextQuestion() {
+    // 安全策: データがない場合は中断
+    if (!allQuestions || allQuestions.length === 0) return;
+
     // リセット
     clearInterval(timer);
     isBuzzing = false;
@@ -106,18 +128,29 @@ function nextQuestion() {
     dom.viewResult.classList.add('hidden');
     dom.buzzBtn.disabled = false;
 
-    // 問題抽選
-    if (currentPool.length === 0) currentPool = [...allQuestions];
+    // 問題プールが空になったら補充
+    if (currentPool.length === 0) {
+        currentPool = [...allQuestions];
+    }
+
+    // ランダム出題
     const randIdx = Math.floor(Math.random() * currentPool.length);
     currentQ = currentPool[randIdx];
 
-    const kLen = currentQ.kimariji_len || 5;
+    // currentQがundefinedにならないようチェック
+    if (!currentQ) {
+        dom.qText.textContent = "問題データの取得に失敗しました。";
+        return;
+    }
+
+    // 決まり字の長さ（データになければ5文字とする）
+    const kLen = currentQ.kimariji_len ? parseInt(currentQ.kimariji_len) : 5;
 
     // 表示処理
     dom.qText.innerHTML = "";
     
     if (mode === 'kimariji') {
-        // 決まり字モード：即入力画面へ
+        // 決まり字モード
         dom.viewBuzz.classList.add('hidden');
         dom.viewAnswer.classList.remove('hidden');
         
@@ -128,7 +161,10 @@ function nextQuestion() {
     } else {
         // 早押しモード：文字送り
         charIndex = 0;
+        dom.qText.innerHTML = ""; // クリア
+        
         timer = setInterval(() => {
+            // 文字送り処理
             if (charIndex < currentQ.question.length) {
                 const char = currentQ.question.charAt(charIndex);
                 if (charIndex === kLen - 1) {
@@ -164,7 +200,7 @@ function checkAnswer() {
     dom.viewAnswer.classList.add('hidden');
     dom.viewResult.classList.remove('hidden');
 
-    // 判定
+    // 判定（答え か 読み仮名 に一致すれば正解）
     const isCorrect = (val === currentQ.answer || val === currentQ.kana);
 
     if (isCorrect) {
@@ -172,7 +208,7 @@ function checkAnswer() {
         dom.resMsg.className = "correct";
         dom.qText.textContent = currentQ.question; // 全文表示
         
-        // 正解したらリストから削除
+        // リストから削除
         if (wrongList.has(currentQ.question)) {
             wrongList.delete(currentQ.question);
             saveList();
@@ -180,11 +216,17 @@ function checkAnswer() {
     } else {
         dom.resMsg.textContent = "不正解...";
         dom.resMsg.className = "wrong";
-        // 残り文字を表示
-        const rest = currentQ.question.substring(charIndex || currentQ.kimariji_len || 0);
-        dom.qText.innerHTML += `<span style="color:#aaa">${rest}</span>`;
         
-        // 間違えたらリストに追加
+        // 残りの文字を表示（早押しモードなどで途中だった場合）
+        const fullText = currentQ.question;
+        const currentLen = dom.qText.textContent.length; // 今表示されている文字数
+        
+        // 既に表示されているHTMLはそのままに、残りを薄く追加
+        // ※単純化のため、全文書き直しつつ、後半を薄くする
+        // 決まり字モードなら全部再描画でOK
+        dom.qText.innerHTML = fullText; 
+        
+        // リストに追加
         if (!wrongList.has(currentQ.question)) {
             wrongList.add(currentQ.question);
             saveList();
@@ -193,12 +235,14 @@ function checkAnswer() {
 
     dom.resCorrect.textContent = `A. ${currentQ.answer} (${currentQ.kana})`;
     updateReviewBtnState();
-    dom.nextBtn.focus();
+    
+    // 次へボタンにフォーカス（エンター連打で進めるように）
+    setTimeout(() => dom.nextBtn.focus(), 50);
 }
 
 // === 復習リスト関連 ===
 function updateReviewBadge() {
-    dom.badgeReview.textContent = wrongList.size;
+    if(dom.badgeReview) dom.badgeReview.textContent = wrongList.size;
 }
 
 function saveList() {
@@ -209,23 +253,25 @@ function saveList() {
 function updateReviewBtnState() {
     if (wrongList.has(currentQ.question)) {
         dom.reviewToggleBtn.textContent = "リストから削除";
-        dom.reviewToggleBtn.classList.add('wrong'); // 赤っぽく
+        dom.reviewToggleBtn.className = "action-btn wrong"; // 赤く
     } else {
         dom.reviewToggleBtn.textContent = "リストに追加";
-        dom.reviewToggleBtn.classList.remove('wrong');
+        dom.reviewToggleBtn.className = "action-btn secondary"; // 通常
     }
 }
 
-// トグルボタン（結果画面）
-dom.reviewToggleBtn.onclick = () => {
-    if (wrongList.has(currentQ.question)) {
-        wrongList.delete(currentQ.question);
-    } else {
-        wrongList.add(currentQ.question);
-    }
-    saveList();
-    updateReviewBtnState();
-};
+// トグルボタン
+if(dom.reviewToggleBtn) {
+    dom.reviewToggleBtn.onclick = () => {
+        if (wrongList.has(currentQ.question)) {
+            wrongList.delete(currentQ.question);
+        } else {
+            wrongList.add(currentQ.question);
+        }
+        saveList();
+        updateReviewBtnState();
+    };
+}
 
 // 復習パネル開閉
 window.toggleReview = () => {
@@ -244,7 +290,6 @@ function renderReviewList() {
         return;
     }
 
-    // 文字列(Set)だけだと詳細が出せないので、allQuestionsから検索
     const list = allQuestions.filter(q => wrongList.has(q.question));
     
     list.forEach(q => {
@@ -256,11 +301,10 @@ function renderReviewList() {
             </div>
             <button class="del-btn">削除</button>
         `;
-        // 削除ボタンのイベント
         li.querySelector('.del-btn').onclick = () => {
             wrongList.delete(q.question);
             saveList();
-            renderReviewList(); // 再描画
+            renderReviewList();
         };
         dom.reviewList.appendChild(li);
     });
@@ -275,13 +319,13 @@ window.clearReviewList = () => {
 };
 
 // === イベントリスナー ===
-dom.buzzBtn.onclick = buzz;
-dom.submitBtn.onclick = checkAnswer;
-dom.nextBtn.onclick = nextQuestion;
+if(dom.buzzBtn) dom.buzzBtn.onclick = buzz;
+if(dom.submitBtn) dom.submitBtn.onclick = checkAnswer;
+if(dom.nextBtn) dom.nextBtn.onclick = nextQuestion;
 
-// キーボード
+// キーボード操作
 document.addEventListener('keydown', (e) => {
-    // Enter
+    // Enterキー
     if (e.code === 'Enter') {
         if (!dom.viewAnswer.classList.contains('hidden')) {
             checkAnswer();
@@ -289,10 +333,10 @@ document.addEventListener('keydown', (e) => {
             nextQuestion();
         }
     }
-    // Space (Buzz)
+    // Spaceキー
     if (e.code === 'Space') {
         if (!dom.viewBuzz.classList.contains('hidden') && mode === 'normal') {
-            e.preventDefault(); // スクロール防止
+            e.preventDefault(); 
             buzz();
         }
     }
