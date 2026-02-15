@@ -1,113 +1,173 @@
 body {
-    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    background-color: #f0f2f5;
-    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #ffffff;
+    color: #111;
+    margin: 0;
+    padding: 20px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
     min-height: 100vh;
-    margin: 0;
 }
 
-.container {
-    width: 90%;
-    max-width: 700px;
-    background: white;
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    text-align: center;
-}
-
-h1 { margin-top: 0; font-size: 1.5rem; color: #444; }
-
-/* 問題文エリア */
-.question-box {
-    min-height: 100px;
-    background: #e3f2fd; /* 薄い青 */
-    padding: 25px;
-    border-radius: 8px;
-    margin-bottom: 25px;
-    font-size: 1.4rem;
-    line-height: 1.6;
-    text-align: center; /* 短い文が多いので中央寄せ */
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* 決まり字部分のスタイル */
-.kimariji-part {
-    color: #d32f2f; /* 赤 */
-    border-bottom: 2px solid #d32f2f;
-}
-
-/* 確定後の残り部分（回答後に表示） */
-.rest-part {
-    color: #555;
-    font-weight: normal;
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* 入力エリア */
-#answer-area {
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-
-input[type="text"] {
-    padding: 12px;
-    font-size: 1.2rem;
-    width: 60%;
-    border: 2px solid #ccc;
-    border-radius: 6px;
-    outline: none;
-}
-
-input[type="text"]:focus {
-    border-color: #2196f3;
-}
-
-button {
-    padding: 12px 24px;
-    font-size: 1rem;
-    cursor: pointer;
-    border: none;
-    border-radius: 6px;
-    background-color: #2196f3;
-    color: white;
-    transition: background 0.2s;
-}
-
-button:hover { background-color: #1976d2; }
-
-#next-btn {
-    background-color: #4caf50; /* 緑 */
-    margin-top: 15px;
+header {
     width: 100%;
-    font-size: 1.2rem;
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 40px;
+}
+
+nav button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: #999;
+    margin-right: 15px;
+    padding: 0;
+}
+
+nav button.active {
+    color: #000;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+nav button:hover { color: #333; }
+
+#status { font-size: 12px; color: #ccc; }
+
+main {
+    width: 100%;
+    max-width: 800px;
+}
+
+/* 問題文 */
+#question-area {
+    min-height: 120px;
+    margin-bottom: 40px;
+}
+
+#question-text {
+    font-size: 24px;
+    line-height: 1.6;
+    font-weight: 500;
+    white-space: pre-wrap;
+}
+
+/* 決まり字などの強調 */
+.highlight { color: #d00; } 
+.faded { color: #ccc; }
+
+/* アクションエリア */
+#action-area {
+    margin-bottom: 60px;
+}
+
+.hidden { display: none !important; }
+
+/* 入力フォーム */
+input[type="text"] {
+    font-size: 24px;
+    border: none;
+    border-bottom: 2px solid #333;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    max-width: 400px;
+    padding: 5px 0;
+    border-radius: 0; /* iOS対策 */
+}
+
+/* ボタン類 */
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+#buzz-btn {
+    width: 100%;
+    height: 200px; /* 透明な大きなクリックエリア */
+    opacity: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+}
+
+#submit-btn, #next-btn {
+    background: #111;
+    color: #fff;
+    border: none;
+    padding: 10px 30px;
+    font-size: 16px;
+    margin-left: 10px;
+}
+
+.sub-btn {
+    background: none;
+    border: 1px solid #ccc;
+    color: #666;
+    padding: 10px 20px;
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+.text-btn {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 12px;
+    text-decoration: underline;
 }
 
 /* 結果表示 */
-.hidden { display: none; }
-
-#result-msg {
-    font-size: 1.8rem;
+#result-label {
+    font-size: 18px;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
 }
-.correct { color: #2e7d32; }
-.wrong { color: #d32f2f; }
+.correct { color: #000; }
+.wrong { color: #d00; }
 
-#correct-answer {
+#correct-info {
+    font-size: 14px;
     color: #666;
-    font-size: 1rem;
+    margin-bottom: 20px;
 }
+
+/* 復習リスト */
+#review-list-area {
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-size: 14px;
+    font-weight: bold;
+}
+#wrong-list {
+    list-style: none;
+    padding: 0;
+}
+#wrong-list li {
+    font-size: 13px;
+    color: #666;
+    border-bottom: 1px solid #f9f9f9;
+    padding: 8px 0;
+    display: flex;
+    justify-content: space-between;
+}
+#wrong-list li button {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 16px;
+}
+#wrong-list li button:hover { color: #d00; }
