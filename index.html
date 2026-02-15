@@ -3,36 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>決まり字クイズ</title>
+    <title>Quiz</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>決まり字 クイズ道場</h1>
-            <div id="status">データ読込中...</div>
-        </header>
 
-        <main>
-            <div id="quiz-area" class="hidden">
-                <div class="question-box">
-                    <div id="question-text"></div>
-                </div>
+    <header>
+        <nav>
+            <button id="nav-kimariji" onclick="setMode('kimariji')" class="active">決まり字</button>
+            <button id="nav-normal" onclick="setMode('normal')">早押し</button>
+            <button id="nav-review" onclick="toggleReviewMode()">復習 (<span id="review-count">0</span>)</button>
+        </nav>
+        <div id="status">Ready</div>
+    </header>
 
-                <div id="answer-area">
-                    <input type="text" id="user-input" placeholder="答えを入力（ひらがな可）" autocomplete="off">
-                    <button id="submit-btn">回答する</button>
-                </div>
+    <main>
+        <div id="question-area">
+            <div id="question-text">ここに問題が表示されます</div>
+        </div>
 
-                <div id="result-area" class="hidden">
-                    <div id="result-msg"></div>
-                    <div id="correct-answer"></div>
-                    <button id="next-btn">次の問題へ</button>
+        <div id="action-area">
+            
+            <div id="phase-buzz">
+                <button id="buzz-btn">SPACE</button>
+            </div>
+
+            <div id="phase-answer" class="hidden">
+                <input type="text" id="user-input" autocomplete="off">
+                <button id="submit-btn">ENTER</button>
+            </div>
+
+            <div id="phase-result" class="hidden">
+                <div id="result-label"></div>
+                <div id="correct-info"></div>
+                <div class="result-actions">
+                    <button id="next-btn" class="autofocus">NEXT</button>
+                    <button id="del-review-btn" class="sub-btn">リストから削除</button>
                 </div>
             </div>
-        </main>
-    </div>
+
+        </div>
+
+        <div id="review-list-area" class="hidden">
+            <div class="list-header">
+                <span>Wrong List</span>
+                <button onclick="clearReviewList()" class="text-btn">Clear All</button>
+            </div>
+            <ul id="wrong-list"></ul>
+        </div>
+
+    </main>
 
     <script src="script.js"></script>
 </body>
